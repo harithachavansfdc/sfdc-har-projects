@@ -57,4 +57,46 @@ global with sharing class CaseManager {
             }
         if(!cmMap.isEmpty()){ 
             List<case> caseList = new List<case>();
-            for…
+            for(payLoad p: data){ 
+             Case thisCase = new Case(Subject='test',Status='New');
+                // set queuename
+                thisCase.OwnerId = queueMap.get(p.AgentQueueName).Id;
+                smptest_UL_QueueEscalationSettings_mdt recType = cmMap.get(p.AgentQueueName);
+                // set recordType name
+                thisCase.recordTypeId = recMap.get(recType.smptest_UL_RecordType_c).Id;
+                
+                List<Entitlement> entList =entitlementMap.get(p.TSYS_Accout_Id);
+                for(Entitlement eObj: entList){
+                 thisCase.accountId=  eObj.AccountId;  
+                    // expecting some criteria to find type entitlement
+                if(!entList.isEmpty() && eObj.Name=='Complaint'){
+              		thisCase.EntitlementId= eObj.Id ;
+                }
+                }
+            }
+            //insert thisCase;
+        }
+        }Catch(exception e){
+            system.debug('error:'+e.getMessage()+' '+e.getStackTraceString() );
+            RestContext.response.statusCode = 400;
+            List<SalesforceError> errs = new List<SalesforceError>{new SalesforceError('Error', e.getMessage())};
+            RestContext.response.responseBody = Blob.valueOf(JSON.serialize(errs));  
+            RestContext.response.addHeader('Content-Type', 'application/json');
+        }
+
+    } 
+    global class payLoad {
+        webservice String AgentQueueName;
+        webservice string IMI_Chat_Id;
+        webservice string TSYS_Accout_Id;
+    }
+    global class SalesforceError {
+    global String errorCode;
+    global String message;
+    global SalesforceError(String errorCode, string message){
+        this.errorCode = errorCode;
+        this.message = message;
+    }
+   }
+       
+}
