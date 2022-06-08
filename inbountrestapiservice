@@ -1,1 +1,60 @@
+@RestResource(urlMapping='/Cases/*')
+global with sharing class CaseManager {
 
+    @HttpPost
+    global static void createCase(List<payLoad> data) {
+        HttpResponse hr = new HttpResponse();
+        try{
+            set<string> queueNameList = new set<string>();
+            set<string> entitlementList = new set<string>();
+            set<string> recordTypeNameList = new set<string>();
+            Map<string,payLoad> accountidList = new Map<string,payLoad>();
+            for(payLoad p: data){
+               
+                queueNameList.add(p.AgentQueueName);
+                if(p.TSYS_Accout_Id!=null)
+				accountidList.put(p.TSYS_Accout_Id,p);                
+            }    
+         // Need to update query filter with the right filter. I see two queueu Agent and SME   
+        map<string,smptest_UL_QueueEscalationSettingsmdt> cmMap = new   map<string,smptestUL_QueueEscalationSettings_mdt>();
+            for(smptest_UL_QueueEscalationSettingsmdt mdt:[Select id,smptestDepartment_c,
+                                                       smptest_UL_AgentQueueName_c,
+                                                       smptest_UL_CaseType_c,
+                                                       smptest_UL_EntitlementProcess_c,
+                                                       smptest_UL_PSD2EntitlementProcess_c,
+                                                       smptest_UL_RecordType_c,
+                                                       smptest_UL_SMECaseQueueName_c,
+                                                       DeveloperName,
+                                                       label from smptest_UL_QueueEscalationSettings_mdt where 
+                                                              smptest_UL_AgentQueueName_c=:queueNameList ]){
+                   cmMap.put(mdt.smptest_UL_AgentQueueName_c,mdt);  
+                    //adding both entitlements
+            	   entitlementList.add(mdt.smptest_UL_EntitlementProcess_c); 
+                   entitlementList.add(mdt.smptest_UL_PSD2EntitlementProcess_c);
+                   //addding queue
+                   queueNameList.add(mdt.smptest_UL_SMECaseQueueName_c);
+                   recordTypeNameList.add(mdt.smptest_UL_RecordType_c);
+                                                                  
+            }
+
+            Map<string,List<Entitlement>> entitlementMap = new Map<string,List<Entitlement>>();
+            Map<string,recordType> recMap = new Map<string,recordType>();
+            Map<string,group> queueMap = new Map<string,group>();
+            // asssuming external field on account. Might replace with your corrrect fields. Accounts are connected to entitlement 
+ 
+            for(Entitlement en: [SELECT AccountId,Account.smptest_TSYS_Accout_Idc, Name FROM Entitlement WHERE  Account.smptestTSYS_Accout_Id_c =:accountidList.keySet()
+                                 AND  SlaProcessId IN (SELECT Id  From SlaProcess Where Name=:entitlementList)
+                                 And EndDate >= Today And StartDate <= Today]){
+                 if(!entitlementMap.containsKey(en.Account.smptest_TSYS_Accout_Id_c))
+                     entitlementMap.put(en.Account.smptest_TSYS_Accout_Id_c,new List<Entitlement>());
+                 entitlementMap.get(en.Account.smptest_TSYS_Accout_Id_c).add(en);
+            }
+            for(recordType rt: [Select id,name,DeveloperName from recordType where sobjectType='case' and DeveloperName=:recordTypeNameList]){
+                recMap.put(rt.DeveloperName,rt);
+            }
+            for( Group  gp: [select Id,DeveloperNAME from Group where Type = 'Queue' AND DeveloperNAME =:queueNameList] ){
+                queueMap.put(gp.DeveloperNAME,gp);
+            }
+        if(!cmMap.isEmpty()){ 
+            List<case> caseList = new List<case>();
+            for…
