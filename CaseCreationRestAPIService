@@ -1,0 +1,48 @@
+@RestResource(urlMapping='/Cases/*')
+global with sharing class CaseCreationRestAPIService {
+    
+    @HttpPost
+    global static void createCase(payLoad data) {
+        HttpResponse hr = new HttpResponse();
+        
+        system.debug('data From IMI'+data);
+        
+        try{
+            Case thisCase = new Case(Subject='test',Status='New');
+            
+            //Create a Case Record with the Chat ID and External Account ID details received from Rest API
+            thisCase.UL_IMIChatID__c = data.chatId;
+            thisCase.UL_TSYSRecord__c  = data.accountId;
+            
+            system.debug('Case From IMI'+thisCase);
+            
+            RestContext.response.statusCode = 200;
+            RestContext.response.responseBody = Blob.valueOf(JSON.serialize('Success'));  
+            RestContext.response.addHeader('Content-Type', 'application/json');
+            
+        }Catch(exception e){
+            system.debug('error:'+e.getMessage()+' '+e.getStackTraceString() );
+            
+            RestContext.response.statusCode = 400;      
+            List<SalesforceError> errs = new List<SalesforceError>{new SalesforceError('Error', e.getMessage())};
+            RestContext.response.responseBody = Blob.valueOf(JSON.serialize(errs));  
+            RestContext.response.addHeader('Content-Type', 'application/json');
+        }
+        
+    }
+    
+    global class payLoad {
+        webservice String queueMetadataAPIName;
+        webservice string chatId;
+        webservice string accountId;
+    }
+    
+    global class SalesforceError {
+        global String errorCode;
+        global String message;
+        global SalesforceError(String errorCode, string message){
+            this.errorCode = errorCode;
+            this.message = message;
+        }
+    }      
+}
