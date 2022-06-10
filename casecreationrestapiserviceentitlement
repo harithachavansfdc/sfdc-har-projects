@@ -1,0 +1,111 @@
+@RestResource(urlMapping='/Cases/*')
+global with sharing class CaseCreationRestAPIService {
+    
+    @HttpPost
+    global static void createCase(List<payload> data) {
+        HttpResponse hr = new HttpResponse();
+        try{
+            set<string> queueNameList = new set<string>();
+            set<string> entitlementList = new set<string>();
+            set<string> recordTypeNameList = new set<string>();
+            Map<string,payLoad> accountidList = new Map<string,payLoad>();
+            for(payLoad p: data){
+                queueNameList.add(p.queueMetadataAPIName);
+                if(p.TSYS_Accout_Id!=null)
+                    accountidList.put(p.accountId,p);                
+            }    
+  
+            map<string,UL_QueueEscalationSettings__mdt> cmMap = new map<string,UL_QueueEscalationSettings__mdt>();
+            for(UL_QueueEscalationSettings__mdt mdt:[Select id,Department__c,
+                                                     UL_AgentQueueName__c,
+                                                     UL_CaseType__c,
+                                                     //UL_EntitlementProcess__c,
+                                                     //UL_PSD2EntitlementProcess__c,
+                                                     UL_RecordType__c,
+                                                     //UL_SMECaseQueueName__c,
+                                                     DeveloperName,
+                                                     label from UL_QueueEscalationSettings__mdt where 
+                                                     UL_AgentQueueName__c=:queueNameList]){
+                                                         cmMap.put(mdt.UL_AgentQueueName__c,mdt);  
+                                                         //adding both entitlements
+                                                         entitlementList.add(mdt.UL_EntitlementProcess__c); 
+                                                         entitlementList.add(mdt.UL_PSD2EntitlementProcess__c);
+                                                         //addding queue
+                                                         queueNameList.add(mdt.UL_SMECaseQueueName__c);
+                                                         recordTypeNameList.add(mdt.UL_RecordType__c);                                                         
+                                                     }
+            
+            Map<string,List<Entitlement>> entitlementMap = new Map<string,List<Entitlement>>();
+            Map<Id,String > financialAccountMap = new Map<Id,String>();            
+            Map<string,recordType> recMap = new Map<string,recordType>();
+            Map<string,group> queueMap = new Map<string,group>();
+            
+            for(UL_FinancialAccount__c fc: [SELECT Name, UL_AccountID__c, UL_Customer__c  
+                                            FROM UL_FinancialAccount__c WHERE UL_ExternalAccountID__c IN:accountidList.keySet()]){
+                                                if(!financialAccountMap.containsKey(fc.UL_Customer__c))
+                                                    financialAccountMap.put(fc.UL_Customer__c,fc.Name);
+                                            }
+            
+            for(Entitlement en: [SELECT AccountId, Name FROM Entitlement WHERE  AccountId IN:(financialAccountMap.keySet())
+                                 AND  SlaProcessId IN (SELECT Id  From SlaProcess Where Name=:entitlementList)
+                                 And EndDate >= Today And StartDate <= Today]){
+                                     if(!entitlementMap.containsKey(financialAccountMap.get(en.AccountId)))
+                                         entitlementMap.put(financialAccountMap.get(en.AccountId),new List<Entitlement>());
+                                     entitlementMap.get(financialAccountMap.get(en.AccountId)).add(en);
+                                 }
+            for(recordType rt: [Select id,name,DeveloperName from recordType where sobjectType='case' and DeveloperName=:recordTypeNameList]){
+                recMap.put(rt.DeveloperName,rt);
+            }
+            for( Group  gp: [select Id,DeveloperNAME from Group where Type = 'Queue' AND DeveloperNAME =:queueNameList] ){
+                queueMap.put(gp.DeveloperNAME,gp);
+            }
+            if(!cmMap.isEmpty()){ 
+                List<case> caseList = new List<case>();
+                for(payLoad p: data){ 
+                    Case thisCase = new Case(Subject='test',Status='New');
+                    // set queuename
+                    thisCase.OwnerId = queueMap.get(p.AgentQueueName).Id;
+                    UL_QueueEscalationSettings__mdt recType = cmMap.get(p.AgentQueueName);
+                    // set recordType name
+                    thisCase.recordTypeId = recMap.get(recType.UL_RecordType__c).Id;
+                    
+                    List<Entitlement> entList =entitlementMap.get(p.TSYS_Accout_Id);
+                    for(Entitlement eObj: entList){
+                        thisCase.accountId=  eObj.AccountId;  
+
+                        if(!entList.isEmpty() && eObj.Name=='Complaint'){
+                            thisCase.EntitlementId= eObj.Id ;
+                        }
+                    }
+                    caseList.add(thisCase); 
+                }
+                insert caseList;          
+            }
+            
+            RestContext.response.statusCode = 200;
+            RestContext.response.responseBody = Blob.valueOf(JSON.serialize('Success'));  
+            RestContext.response.addHeader('Content-Type', 'application/json');
+            
+        }Catch(exception e){
+            system.debug('error:'+e.getMessage()+' '+e.getStackTraceString() );
+            RestContext.response.statusCode = 400;
+            List<SalesforceError> errs = new List<SalesforceError>{new SalesforceError('Error', e.getMessage())};
+            RestContext.response.responseBody = Blob.valueOf(JSON.serialize(errs));  
+            RestContext.response.addHeader('Content-Type', 'application/json');
+        }
+        
+    } 
+    global class payload {
+        webservice String queueMetadataAPIName;
+        webservice string chatId;
+        webservice string accountId;
+    }
+    global class SalesforceError {
+        global String errorCode;
+        global String message;
+        global SalesforceError(String errorCode, string message){
+            this.errorCode = errorCode;
+            this.message = message;
+        }
+    }      
+}
