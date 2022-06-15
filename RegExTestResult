@@ -1,0 +1,2 @@
+Assertion Failed: Expected: This is a test of multiple PANs - 411111****3333,41111-1****-3333,and some extra text 4111-11****-3333, 4111-11****-3333 and all should mask., 
+Actual: This is a test of multiple PANs - 411111****3333,41111-1****-3333,and some extra text 4111-1122-2222-3333, 4111-11****2-3333 and all should mask.
