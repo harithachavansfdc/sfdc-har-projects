@@ -1,0 +1,26 @@
+public class DataMaskingUtilityClass {
+    
+    public static String matchPANRegEx(String strMask) {       
+
+        String s= strMask;
+        String s1='';
+        String regstr = system.label.PANRegexPattern;
+
+        Pattern mcprefix = Pattern.compile(regstr);
+        
+        Matcher m = mcprefix.matcher(s);
+        system.debug(m.groupCount());
+        
+        m.find();
+        for(Integer i=1;i<=m.groupCount();i++){
+          String g1 = m.group(i);
+            if( g1.contains('2')) s1=s.replace(g1,'****'); 
+        }
+        
+        system.debug(s1);
+        
+        return s1;
+        
+    }        
+
+}
