@@ -1,0 +1,92 @@
+@isTest
+public class DataMaskingUtiltiyTestClass {
+
+    public static String sPAN16ToMask = '4111-1122-2222-3333';
+    public static String sPAN15NSToMask = '411111222223333';
+    public static String sPAN15Dig564ToMask = '41111-122222-3333';    
+    public static String sPANToMask = '4111-1122-2222-3333';
+    public static String sPANMultiToMask = 'This is a test of multiple PANs - 411111222223333,41111-122222-3333,'
+        + 'and some extra text 4111-1122-2222-3333, 4111-11222222-3333 and all should mask.';
+    
+    @TestSetup
+    static void prepareTestData() {
+    }
+    
+	@isTest //positive unit test for the REST API POST call
+    static void testPAN16String() {
+        
+        //DataMaskingUtilityClass dataMask = new DataMaskingUtilityClass();
+        
+        Test.startTest();
+		String maskedPAN = DataMaskingUtilityClass.matchPANRegEx(sPAN16ToMask);
+        Test.stopTest();
+        
+        System.assertEquals('4111-11****-3333', maskedPAN);
+    }
+    
+	@isTest //positive unit test for the REST API POST call
+    static void testPAN15NoSeperator() {
+        
+        //DataMaskingUtilityClass dataMask = new DataMaskingUtilityClass();
+        
+        Test.startTest();
+		String maskedPAN = DataMaskingUtilityClass.matchPANRegEx(sPAN15NSToMask);
+        Test.stopTest();
+        
+        System.assertEquals('411111****3333', maskedPAN);
+    }
+
+	@isTest //positive unit test for the REST API POST call
+    static void test15Dig564() {
+        
+        //DataMaskingUtilityClass dataMask = new DataMaskingUtilityClass();
+        
+        Test.startTest();
+		String maskedPAN = DataMaskingUtilityClass.matchPANRegEx(sPAN15Dig564ToMask);
+        Test.stopTest();
+        
+        System.assertEquals('41111-1****-3333', maskedPAN);
+    }
+
+	@isTest //positive unit test for the REST API POST call
+    static void test15Dig654() {
+        
+        //DataMaskingUtilityClass dataMask = new DataMaskingUtilityClass();
+        
+        Test.startTest();
+		String maskedPAN = DataMaskingUtilityClass.matchPANRegEx(sPANToMask);
+        Test.stopTest();
+        
+        System.assertEquals('4111-11****-3333', maskedPAN);
+    }
+
+	@isTest //positive unit test for the REST API POST call
+    static void testPAN16NoSeperator() {
+        
+        //DataMaskingUtilityClass dataMask = new DataMaskingUtilityClass();
+        
+        Test.startTest();
+		String maskedPAN = DataMaskingUtilityClass.matchPANRegEx(sPANToMask);
+        Test.stopTest();
+        
+        System.assertEquals('4111-11****-3333', maskedPAN);
+    }
+    
+	@isTest //positive unit test for the REST API POST call
+    static void testMultiPANText() {
+        
+        //DataMaskingUtilityClass dataMask = new DataMaskingUtilityClass();
+        
+        Test.startTest();
+		String maskedPAN = DataMaskingUtilityClass.matchPANRegEx(sPANMultiToMask);
+        Test.stopTest();
+        
+        String multiPANMaskedText = 'This is a test of multiple PANs - 411111****3333,41111-1****-3333,' 
+            + 'and some extra text 4111-11****-3333, 4111-11****-3333 and all should mask.';
+        
+        system.debug('sPANMultiToMask: '+ sPANMultiToMask);
+        system.debug('multiPANMaskedText: '+ multiPANMaskedText);
+        
+        System.assertEquals(multiPANMaskedText, maskedPAN);
+    }    
+}
