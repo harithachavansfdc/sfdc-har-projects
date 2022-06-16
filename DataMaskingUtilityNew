@@ -1,0 +1,37 @@
+public class DataMaskingUtilityClass {
+    
+    public static String matchPANRegEx(String strMask) {       
+
+        String s= strMask;
+        String s1='';
+        String regstr = system.label.regexSamplePattren;
+        List<string> ls = new List<string>();
+        List<string> result = new List<string>();
+
+        if(strMask.contains(',')){            
+            //s= s.replaceAll('[A-Za-z]','').replace(' - ','');
+            ls = s.split(',');
+        }else
+             ls.add(s);
+        system.debug(ls);
+        
+            for(integer i=0;i<ls.size();i++){
+            Pattern mcprefix = Pattern.compile(regstr);
+            
+            Matcher m = mcprefix.matcher(ls[i]);
+            system.debug(m.groupCount());
+            
+            m.find();
+            for(Integer J=1;j<=m.groupCount();j++){
+              String g1 = m.group(j);
+                if( g1.contains('2')) s1=(s1!=''?s1+',':s1)+ls[i].replace(g1,'**'); 
+            }
+            }
+            system.debug(s1);
+        
+        
+        return s1;
+        
+    }        
+
+}
